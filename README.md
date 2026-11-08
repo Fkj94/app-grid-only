@@ -23,21 +23,25 @@ Inspired by the app launcher experience of macOS, it gives you a simple, distrac
 ### Requirements
 
 - GNOME Shell 51
-- `gnome-extensions` and `gnome-extensions pack`
+- `gnome-extensions`
+- `gjs`
+- `python3`
+- a POSIX-compatible `/bin/sh`
 
 ### From source
 
 ```bash
 git clone https://github.com/Fkj94/app-grid-only.git
 cd app-grid-only
-
-gnome-extensions pack --force
-gnome-extensions install --force app-grid-only@fkj94.shell-extension.zip
+./install.sh
 ```
 
-Then enable **App Grid Only** using the GNOME Extensions app.
-
-Log out and back in to restart GNOME Shell if necessary.
+The script checks the declared GNOME Shell major version, validates JavaScript
+module syntax with Node.js or GJS, validates the generated bundle, and installs
+it for the current user. In an active GNOME X11 or Wayland session it also
+attempts to enable the extension. Outside such a session, it installs the files
+and skips activation. Installation and activation do not constitute a functional
+test.
 
 ## Recommended companion: Blur my Shell
 

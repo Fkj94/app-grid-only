@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
@@ -64,7 +65,8 @@ export default class AppGridOnlyExtension extends Extension {
     _logEvent(level, event, details = {}) {
         const logger = level === 'error'
             ? console.error
-            : level === 'warning' ? console.warn : console.info;
+            : level === 'warning' ? console.warn
+            : level === 'debug' ? console.debug : console.info;
         const record = {
             extension: 'app-grid-only',
             sequence: ++this._logSequence,
@@ -93,8 +95,10 @@ export default class AppGridOnlyExtension extends Extension {
 
         const recovery = code === 'GNOME_API_MISMATCH'
             ? 'Check the supported GNOME Shell versions for this extension.'
-            : 'If this continues, include this error and the GNOME Shell version in a bug report.';
-        this._logEvent(level, 'error', {
+            : code === 'GESTURE_FALLBACK'
+                ? 'GNOME will handle this gesture using its native behavior.'
+                : 'If this continues, include this error and the GNOME Shell version in a bug report.';
+        this._logEvent(level, level === 'warning' ? 'warning' : 'error', {
             context,
             code,
             message,
@@ -137,13 +141,20 @@ export default class AppGridOnlyExtension extends Extension {
     }
 
     _restoreOverrides() {
-        try {
-            this._injectionManager?.clear();
-        } catch (error) {
-            this._logError('Failed to restore GNOME methods', error);
-        } finally {
-            this._injectionManager = null;
+        const injectionManager = this._injectionManager;
+
+        if (injectionManager) {
+            try {
+                injectionManager.clear();
+                this._injectionManager = null;
+            } catch (error) {
+                // Keep the manager so a later disable can retry the cleanup.
+                this._logError('Failed to restore GNOME methods', error);
+            }
         }
+
+        if (!injectionManager)
+            this._injectionManager = null;
 
         this._restoreVisualState();
         this._refreshLayout();
@@ -155,21 +166,30 @@ export default class AppGridOnlyExtension extends Extension {
         if (!runtime)
             return;
 
-        try {
-            for (const [actor, state] of runtime.visualState) {
-                if (!actor)
-                    continue;
+        if (typeof runtime.primaryWorkspaceVisible === 'boolean') {
+            try {
+                runtime.workspacesDisplay.setPrimaryWorkspaceVisible(
+                    runtime.primaryWorkspaceVisible
+                );
+            } catch (error) {
+                this._logWarning(
+                    'Failed to restore primary workspace visibility',
+                    error
+                );
+            }
+        }
 
+        for (const [actor, state] of runtime.visualState ?? []) {
+            if (!actor)
+                continue;
+
+            try {
                 actor.opacity = state.opacity;
                 actor.visible = state.visible;
                 actor.reactive = state.reactive;
+            } catch (error) {
+                this._logWarning('Failed to restore visual state for actor', error);
             }
-
-            runtime.workspacesDisplay.setPrimaryWorkspaceVisible(
-                runtime.primaryWorkspaceVisible
-            );
-        } catch (error) {
-            this._logWarning('Failed to restore visual state', error);
         }
     }
 
@@ -183,13 +203,7 @@ export default class AppGridOnlyExtension extends Extension {
         // does not override GNOME's own visibility decisions.
         runtime.visualState = new Map();
         const remember = actor => {
-            if (actor && !runtime.visualState.has(actor)) {
-                runtime.visualState.set(actor, {
-                    opacity: actor.opacity,
-                    visible: actor.visible,
-                    reactive: actor.reactive,
-                });
-            }
+            this._rememberVisualState(runtime, actor);
         };
 
         remember(workspacesDisplay);
@@ -215,6 +229,17 @@ export default class AppGridOnlyExtension extends Extension {
         thumbnailsBox.opacity = 0;
         thumbnailsBox.visible = false;
         thumbnailsBox.reactive = false;
+    }
+
+    _rememberVisualState(runtime, actor) {
+        if (!actor || !runtime.visualState || runtime.visualState.has(actor))
+            return;
+
+        runtime.visualState.set(actor, {
+            opacity: actor.opacity,
+            visible: actor.visible,
+            reactive: actor.reactive,
+        });
     }
 
     // ---------------------------------------------------------
@@ -268,6 +293,7 @@ export default class AppGridOnlyExtension extends Extension {
             [stateAdjustment, [
                 'ease',
                 'getStateTransitionParams',
+                'get_transition',
                 'remove_transition',
             ]],
 
@@ -364,6 +390,9 @@ export default class AppGridOnlyExtension extends Extension {
 
         const animationDuration =
             OverviewControls.SIDE_CONTROLS_ANIMATION_TIME;
+        const extension = this;
+        const rememberVisualState = actor =>
+            this._rememberVisualState(runtime, actor);
 
         const overrideMethod = (target, methodName, createMethod) => {
             const extension = this;
@@ -389,10 +418,8 @@ export default class AppGridOnlyExtension extends Extension {
         };
 
         const installGroup = (name, installer) => {
-            this._logEvent('debug', 'override-group-start', {group: name});
             try {
                 installer();
-                this._logEvent('debug', 'override-group-ready', {group: name});
             } catch (error) {
                 this._logError(`installing override group ${name}`, error);
                 throw error;
@@ -477,7 +504,7 @@ export default class AppGridOnlyExtension extends Extension {
 
                     // Preserve a valid allocation while moving the
                     // workspace region outside the visible area.
-                    workspaceBox.set_origin(0, -height);
+                    workspaceBox.set_origin(box.x1, -height);
 
                     return workspaceBox;
                 }
@@ -538,7 +565,7 @@ export default class AppGridOnlyExtension extends Extension {
 
                     const appDisplayBox = new Clutter.ActorBox();
 
-                    appDisplayBox.set_origin(0, startY);
+                    appDisplayBox.set_origin(box.x1, startY);
                     appDisplayBox.set_size(width, appHeight);
 
                     return appDisplayBox;
@@ -604,9 +631,13 @@ export default class AppGridOnlyExtension extends Extension {
                         const finalState = transitionParams?.finalState;
 
                         if (
-                            Number.isFinite(finalState) &&
-                            finalState < APP_GRID
+                            !Number.isFinite(finalState) ||
+                            ![HIDDEN, WINDOW_PICKER, APP_GRID].includes(finalState)
                         ) {
+                            return originalMethod.call(this, direction, ...args);
+                        }
+
+                        if (finalState < APP_GRID) {
                             this._stateAdjustment.remove_transition('value');
 
                             this._stateAdjustment.ease(APP_GRID, {
@@ -670,7 +701,32 @@ export default class AppGridOnlyExtension extends Extension {
                 controlsProto,
                 'gestureBegin',
                 originalMethod => function (tracker, ...args) {
-                    const baseDistance = global.screen_height;
+                    const baseDistance = typeof global !== 'undefined'
+                        ? global.screen_height
+                        : NaN;
+
+                    if (typeof tracker?.confirmSwipe !== 'function') {
+                        extension._logWarning(
+                            'gestureBegin native fallback',
+                            new ExtensionError(
+                                'GESTURE_FALLBACK',
+                                'The gesture tracker has no confirmSwipe method.'
+                            )
+                        );
+                        return originalMethod.call(this, tracker, ...args);
+                    }
+
+                    if (!Number.isFinite(baseDistance) || baseDistance <= 0) {
+                        extension._logWarning(
+                            'gestureBegin native fallback',
+                            new ExtensionError(
+                                'GESTURE_FALLBACK',
+                                'The screen height is unavailable for gesture tracking.'
+                            )
+                        );
+                        return originalMethod.call(this, tracker, ...args);
+                    }
+
                     const progress = this._stateAdjustment.value;
 
                     const points = [HIDDEN, APP_GRID];
@@ -763,6 +819,9 @@ export default class AppGridOnlyExtension extends Extension {
                 originalMethod => function (...args) {
                     const result = originalMethod.apply(this, args);
 
+                    for (const view of this._workspacesViews ?? [])
+                        rememberVisualState(view);
+
                     this.opacity = 0;
                     this.visible = false;
                     this.reactive = false;
@@ -781,6 +840,7 @@ export default class AppGridOnlyExtension extends Extension {
             );
         });
 
+        this._logEvent('debug', 'override-groups-installed', {count: 8});
 
     }
 }

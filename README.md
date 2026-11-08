@@ -1,63 +1,57 @@
-# App Grid Only
+# Welcome to App Grid Only
 
-A minimal GNOME Shell 51 extension that shows the **native application grid directly on Super**, without workspace previews or thumbnails.
+![GNOME 51](https://img.shields.io/badge/GNOME-51-4a86cf?logo=gnome&logoColor=white)
 
-## What it does
+![App Grid Only](screenshots/app-grid.png)
 
-| Action | Result |
-|--------|--------|
-| Press **Super** | Opens the native app grid immediately |
-| Press **Super** again or **Escape** | Closes the grid |
-| Type anything | Native GNOME search, as usual |
+**A cleaner way to browse your applications.**
 
-Everything in the grid is 100 % native GNOME: icons, layout, pagination, search, animations, and app launching are untouched. Only the workspace thumbnails and workspace overview are hidden.
+App Grid Only is a GNOME Shell extension that opens the application grid directly when you press the Super key — without showing the usual workspace previews or window overview.
 
-## Requirements
+Inspired by the app launcher experience of macOS, it gives you a simple, distraction-free view of all your applications while keeping GNOME's native app grid, search, animations and launching experience.
 
-- GNOME Shell **51 / 51.1**
-- Wayland session (CachyOS, Arch, Fedora …)
+## Features
+
+- **Instant access:** Press Super to open your application grid directly.
+- **No workspace previews:** No windows, thumbnails or workspace overview getting in the way.
+- **Native GNOME experience:** Keeps the original application icons, layout, pagination, search and animations.
+- **Simple navigation:** Press Super again or Escape to close the grid.
+- **Keyboard search:** Just start typing to find an application.
 
 ## Installation
+
+### Requirements
+
+- GNOME Shell 51
+- `gnome-extensions` and `gnome-extensions pack`
+
+### From source
 
 ```bash
 git clone https://github.com/Fkj94/app-grid-only.git
 cd app-grid-only
+
 gnome-extensions pack --force
 gnome-extensions install --force app-grid-only@fkj94.shell-extension.zip
-gnome-extensions enable app-grid-only@fkj94
 ```
 
-Then log out and back in, or press **Alt+F2**, type `r`, and press Enter to restart the Shell (X11 only). On Wayland, log out and back in.
+Then enable **App Grid Only** using the GNOME Extensions app.
 
-## Update after editing
+Log out and back in to restart GNOME Shell if necessary.
 
-```bash
-gnome-extensions pack --force
-gnome-extensions install --force app-grid-only@fkj94.shell-extension.zip
-gnome-extensions disable app-grid-only@fkj94
-gnome-extensions enable app-grid-only@fkj94
-```
+## Recommended companion: Blur my Shell
 
-## How it works
+We **highly recommend** using [Blur my Shell](https://extensions.gnome.org/extension/3193/blur-my-shell/) alongside App Grid Only.
 
-The extension uses GNOME Shell's official `InjectionManager` API to surgically override 11 prototype methods across `Overview`, `ControlsManagerLayout`, `ControlsManager`, `SearchController`, and `WorkspacesDisplay`. No system files are modified. All overrides are fully restored when the extension is disabled.
+It adds a beautiful blur effect to the overview background, creating an even more polished, Launchpad-like experience.
 
-| Prototype | Method overridden | Why |
-|-----------|-------------------|-----|
-| `Overview` | `show`, `_animateVisible` | Force `APP_GRID` state instead of `WINDOW_PICKER` |
-| `ControlsManagerLayout` | `_computeWorkspacesBoxForState` | Give workspace area zero height in APP_GRID |
-| `ControlsManagerLayout` | `_getAppDisplayBoxForState` | Expand app grid to fill the freed space |
-| `ControlsManager` | `_shiftState` | Prevent falling back to WINDOW_PICKER |
-| `ControlsManager` | `_onShowAppsButtonToggled` | Dash button → APP_GRID or close |
-| `ControlsManager` | `_onSearchChanged` | Keep workspaces hidden during search |
-| `ControlsManager` | `gestureBegin`, `gestureEnd` | Gestures snap between HIDDEN and APP_GRID only |
-| `SearchController` | `_onStageKeyPress` | Escape resets search or closes the grid |
-| `WorkspacesDisplay` | `prepareToEnterOverview` | Hide workspaces + secondary monitor views on entry |
+Blur my Shell is optional and is not included with App Grid Only.
 
-## UUID
+![App Grid Only with Blur my Shell](screenshots/app-grid-with-blur-my-shell.png)
 
-`app-grid-only@fkj94`
+## Compatibility
 
-## License
+- GNOME Shell 51
+- Wayland
 
-MIT
+Compatibility with other GNOME Shell versions and configurations is not guaranteed yet.

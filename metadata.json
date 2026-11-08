@@ -1,0 +1,11 @@
+{
+  "uuid": "app-grid-only@fkj94",
+  "name": "App Grid Only",
+  "description": "Displays GNOME's native application grid directly on Super key, without workspace previews.",
+  "shell-version": [
+    "51",
+    "51.1"
+  ],
+  "url": "https://github.com/fkj94/app-grid-only",
+  "version": 1
+}

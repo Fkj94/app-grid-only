@@ -1,3 +1,4 @@
 *.zip
 __pycache__/
 *.pyc
+test_extension_lifecycle.py 

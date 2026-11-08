@@ -3,8 +3,10 @@
   "name": "App Grid Only",
   "description": "Displays GNOME's native application grid directly on Super key, without workspace previews.",
   "shell-version": [
-    "51",
-    "51.1"
+    "48",
+    "49",
+    "50",
+    "51"
   ],
   "url": "https://github.com/Fkj94/app-grid-only",
   "version": 1

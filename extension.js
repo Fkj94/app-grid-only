@@ -334,12 +334,6 @@ export default class AppGridOnlyExtension extends Extension {
             );
         }
 
-        if (typeof searchController._stageKeyController?.get_key !== 'function')
-            throw new ExtensionError(
-                'GNOME_API_MISMATCH',
-                'The stage keyboard controller is unavailable.'
-            );
-
         const {
             WINDOW_PICKER,
             APP_GRID,

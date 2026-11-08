@@ -1,6 +1,6 @@
 # Welcome to App Grid Only
 
-![GNOME 51](https://img.shields.io/badge/GNOME-51-4a86cf?logo=gnome&logoColor=white)
+![GNOME 48–51](https://img.shields.io/badge/GNOME-48--51-4a86cf?logo=gnome&logoColor=white)
 
 ![App Grid Only](screenshots/app-grid.png)
 
@@ -22,7 +22,7 @@ Inspired by the app launcher experience of macOS, it gives you a simple, distrac
 
 ### Requirements
 
-- GNOME Shell 51
+- GNOME Shell 48, 49, 50 or 51
 - `gnome-extensions`
 - `gjs`
 - `python3`
@@ -55,7 +55,13 @@ Blur my Shell is optional and is not included with App Grid Only.
 
 ## Compatibility
 
-- GNOME Shell 51
+- GNOME Shell 48–51
 - Wayland
 
-Compatibility with other GNOME Shell versions and configurations is not guaranteed yet.
+### Tested versions
+
+- GNOME 48.7
+- GNOME 51.1
+
+GNOME 49 and 50 are declared compatible but have not yet been
+functionally tested.
